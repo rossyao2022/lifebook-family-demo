@@ -2,6 +2,11 @@ const DB_NAME = "lifebook-local-demo";
 const DB_VERSION = 1;
 const STORE_NAME = "records";
 const TREE_COLLECTION_KEY = "lifebook-tree-collections";
+const AI_ANALYSIS_ENDPOINT = window.LIFEBOOK_AI_ENDPOINT || "/api/analyze";
+const AI_ANALYSIS_TIMEOUT_MS = 45000;
+const AI_IMAGE_LIMIT = 3;
+const AI_IMAGE_MAX_EDGE = 1280;
+const AI_IMAGE_QUALITY = 0.78;
 
 const viewMeta = {
   dashboard: {
@@ -456,7 +461,7 @@ function renderCapture() {
         <div class="panel-header">
           <div>
             <h2>新增成长记录</h2>
-            <p>支持照片、视频、语音和文字。保存后会立即生成本地 AI 成长分析。</p>
+            <p>支持照片、视频、语音和文字。配置服务端后，可以上传压缩图片生成真实 AI 看图分析。</p>
           </div>
         </div>
         <form id="recordForm" class="form-grid">
@@ -473,9 +478,17 @@ function renderCapture() {
             <div class="file-list" id="fileList"></div>
           </div>
 
+          <label class="ai-consent-card wide" for="aiConsent">
+            <input id="aiConsent" name="aiConsent" type="checkbox" />
+            <span>
+              <strong>使用 AI 看图分析</strong>
+              <small>勾选后，本次照片会在浏览器内压缩并移除 EXIF 信息，再上传到服务端调用大模型；未配置服务端时会自动使用本地规则分析。</small>
+            </span>
+          </label>
+
           <div class="field">
             <label for="title">记录标题</label>
-            <input id="title" name="title" placeholder="例如：第一次站上小舞台" required />
+            <input id="title" name="title" placeholder="例如：第一次站上小舞台；留空可由 AI 生成" />
           </div>
 
           <div class="field">
@@ -536,7 +549,7 @@ function renderCapture() {
 
           <div class="field wide">
             <label for="story">成长故事</label>
-            <textarea id="story" name="story" placeholder="写下当时发生了什么、孩子说了什么、你观察到的情绪或变化。" required></textarea>
+            <textarea id="story" name="story" placeholder="写下当时发生了什么、孩子说了什么、你观察到的情绪或变化；勾选 AI 看图时可先留空。"></textarea>
           </div>
 
           <div class="wide row-actions">
@@ -552,11 +565,15 @@ function renderCapture() {
       <aside class="panel">
         <div class="panel-header">
           <div>
-            <h2>保存后会生成</h2>
-            <p>本地 demo 会把输入转成可讲述的成长信号。</p>
+            <h2>分析会生成</h2>
+            <p>有服务端密钥时使用大模型看图；否则保留本地规则引擎兜底。</p>
           </div>
         </div>
         <div class="agent-flow" style="grid-template-columns: 1fr">
+          <div class="agent-step">
+            <strong>图片场景理解</strong>
+            <p>识别照片里的可观察片段，生成标题、故事草稿、情绪和场景建议。</p>
+          </div>
           <div class="agent-step">
             <strong>一句成长总结</strong>
             <p>把记录从“发生了什么”转成“孩子正在发展什么”。</p>
@@ -1031,32 +1048,216 @@ function renderFileList() {
 }
 
 async function saveRecordFromForm(form) {
+  setFormBusy(form, true);
   const data = new FormData(form);
-  const record = {
-    id: crypto.randomUUID(),
-    title: String(data.get("title") || "").trim(),
-    recordDate: String(data.get("recordDate") || new Date().toISOString().slice(0, 10)),
-    createdAt: new Date().toISOString(),
-    source: String(data.get("source") || "妈妈"),
-    scene: String(data.get("scene") || "家庭"),
-    mood: String(data.get("mood") || "开心"),
-    visibility: String(data.get("visibility") || "父母可见"),
-    story: String(data.get("story") || "").trim(),
-    media: state.pendingFiles.map((file) => ({
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      blob: file,
-    })),
-  };
+  try {
+    const record = {
+      id: crypto.randomUUID(),
+      title: String(data.get("title") || "").trim(),
+      recordDate: String(data.get("recordDate") || new Date().toISOString().slice(0, 10)),
+      createdAt: new Date().toISOString(),
+      source: String(data.get("source") || "妈妈"),
+      scene: String(data.get("scene") || "家庭"),
+      mood: String(data.get("mood") || "开心"),
+      visibility: String(data.get("visibility") || "父母可见"),
+      story: String(data.get("story") || "").trim(),
+      media: state.pendingFiles.map((file) => ({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+        blob: file,
+      })),
+    };
 
-  record.analysis = analyzeRecord(record, state.records);
-  await putRecord(record);
-  state.records = await getAllRecords();
-  state.pendingFiles = [];
-  form.reset();
-  toast("已生成成长分析", "记录已进入时间线、成长树和生命之书。");
-  setView("dashboard");
+    if (!record.title && !record.story && !record.media.length) {
+      toast("还没有内容", "请先上传一张照片，或写下一段成长故事。");
+      return;
+    }
+
+    const wantsAiAnalysis = data.get("aiConsent") === "on";
+    const hasImage = record.media.some((item) => item.type.startsWith("image/"));
+    let aiResult = null;
+
+    if (wantsAiAnalysis && hasImage) {
+      toast("正在 AI 看图分析", "照片会先在浏览器内压缩，再发送到服务端。");
+      try {
+        aiResult = await requestRemoteAnalysis(record);
+      } catch (error) {
+        toast("AI 分析未完成", `${getFriendlyAnalysisError(error)} 已改用本地规则生成。`);
+      }
+    }
+
+    if (aiResult?.analysis) {
+      applyRemoteAnalysis(record, aiResult.analysis);
+    } else {
+      if (!record.title) record.title = record.media.length ? "一条新的影像记录" : "一条新的成长记录";
+      if (!record.story) record.story = "这是一条刚刚保存的成长片段，可以稍后补充更多细节。";
+      record.analysis = analyzeRecord(record, state.records);
+    }
+
+    await putRecord(record);
+    state.records = await getAllRecords();
+    state.pendingFiles = [];
+    form.reset();
+    toast(
+      record.analysis?.source === "openai-vision" ? "AI 看图分析已生成" : "已生成本地成长分析",
+      "记录已进入时间线、成长树和生命之书。",
+    );
+    setView("dashboard");
+  } finally {
+    setFormBusy(form, false);
+  }
+}
+
+function setFormBusy(form, busy) {
+  const submitButton = form.querySelector('button[type="submit"]');
+  form.classList.toggle("is-submitting", busy);
+  Array.from(form.elements).forEach((element) => {
+    if (element.type !== "reset") element.disabled = busy;
+  });
+  if (submitButton) {
+    submitButton.innerHTML = busy
+      ? '<span class="button-spinner" aria-hidden="true"></span><span>分析中...</span>'
+      : '<svg class="button-icon"><use href="#icon-seed"></use></svg><span>保存并分析</span>';
+  }
+}
+
+async function requestRemoteAnalysis(record) {
+  const images = await prepareImagesForAnalysis(record.media || []);
+  if (!images.length) {
+    const error = new Error("没有可用于 AI 分析的图片。");
+    error.code = "no_image";
+    throw error;
+  }
+
+  const response = await fetchWithTimeout(AI_ANALYSIS_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      profile: {
+        childName: state.profile.childName,
+        age: state.profile.age,
+        familyName: state.profile.familyName,
+        focus: state.profile.focus,
+      },
+      record: {
+        title: record.title,
+        story: record.story,
+        recordDate: record.recordDate,
+        source: record.source,
+        scene: record.scene,
+        mood: record.mood,
+      },
+      images,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error?.message || "AI 服务请求失败。");
+    error.code = payload.error?.code || "remote_analysis_failed";
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+
+async function prepareImagesForAnalysis(mediaItems) {
+  const imageItems = mediaItems.filter((item) => item.type?.startsWith("image/")).slice(0, AI_IMAGE_LIMIT);
+  const prepared = [];
+  for (const item of imageItems) {
+    prepared.push({
+      name: item.name,
+      type: "image/jpeg",
+      dataUrl: await compressImageToDataUrl(item.blob),
+    });
+  }
+  return prepared;
+}
+
+function compressImageToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error("图片读取失败。"));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => reject(new Error("图片解析失败。"));
+      image.onload = () => {
+        const scale = Math.min(1, AI_IMAGE_MAX_EDGE / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", AI_IMAGE_QUALITY));
+      };
+      image.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_ANALYSIS_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+function applyRemoteAnalysis(record, analysis) {
+  record.title = normalizeText(analysis.title, record.title || "一条新的成长记录");
+  record.story = normalizeText(analysis.story, record.story || "这是一条由 AI 看图生成的成长记录。");
+  record.scene = normalizeChoice(analysis.scene, ["家庭", "学校", "兴趣活动", "旅行", "生日节日", "亲子对话", "作品成果"], record.scene);
+  record.mood = normalizeChoice(analysis.mood, ["开心", "兴奋", "平静", "勇敢", "紧张", "低落", "生气", "好奇"], record.mood);
+  record.analysis = {
+    tags: normalizeTags(analysis.tags),
+    dimensions: normalizeDimensions(analysis.dimensions),
+    leadingDimension: normalizeChoice(analysis.leadingDimension, dimensionNames, "亲子枝"),
+    confidence: clamp(Number(analysis.confidence), 0.45, 0.95),
+    summary: normalizeText(analysis.summary, "这条记录呈现了一个具体的成长信号。"),
+    highlight: normalizeText(analysis.highlight, "这个片段值得继续温柔观察。"),
+    cardTitle: normalizeText(analysis.cardTitle, `${state.profile.childName || "孩子"}的成长时刻`),
+    bookLine: normalizeText(analysis.bookLine, buildBookLine(state.profile.childName || "孩子", record, "成长观察")),
+    visualDescription: normalizeText(analysis.visualDescription, ""),
+    companion: {
+      parentQuestion: normalizeText(analysis.companion?.parentQuestion, `可以问${state.profile.childName || "孩子"}：“你最想让我记住哪一刻？”`),
+      action: normalizeText(analysis.companion?.action, "和孩子一起给这条记录取一个家庭小标题。"),
+      grandparentLine: normalizeText(analysis.companion?.grandparentLine, "宝贝，我们看见了你的成长，也很为你开心。"),
+    },
+    source: "openai-vision",
+  };
+}
+
+function normalizeText(value, fallback) {
+  const text = String(value || "").trim();
+  return text || fallback;
+}
+
+function normalizeChoice(value, choices, fallback) {
+  return choices.includes(value) ? value : fallback;
+}
+
+function normalizeTags(tags) {
+  const normalized = Array.isArray(tags) ? tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 6) : [];
+  return normalized.length ? normalized : ["成长观察"];
+}
+
+function normalizeDimensions(dimensions = {}) {
+  return Object.fromEntries(dimensionNames.map((name) => [name, clamp(Number(dimensions[name] || 0), 0, 6)]));
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function getFriendlyAnalysisError(error) {
+  if (error.name === "AbortError") return "AI 服务响应超时。";
+  if (error.code === "missing_api_key") return "服务端还没有配置 API Key。";
+  if (error.status === 404) return "当前部署还没有 AI 接口。";
+  if (error.status === 413) return "图片请求过大。";
+  return error.message || "AI 服务暂时不可用。";
 }
 
 function saveProfileFromForm(form) {
@@ -1173,6 +1374,8 @@ function analyzeRecord(record, existingRecords) {
     cardTitle: `${childName}的${mainTag}时刻`,
     bookLine: buildBookLine(childName, record, mainTag),
     companion: buildCompanion(record, mainTag, leadingDimension),
+    visualDescription: "",
+    source: "local-rules",
   };
 }
 
@@ -1284,7 +1487,9 @@ function renderRecordCard(record) {
       <div class="record-body">
         <div class="record-meta">${h(buildRecordMeta(record, record.source, record.scene, record.mood))}</div>
         <h3>${h(record.title)}</h3>
+        ${renderAnalysisSource(record)}
         <p>${h(record.analysis.summary)}</p>
+        ${record.analysis.visualDescription ? `<p class="visual-description">${h(record.analysis.visualDescription)}</p>` : ""}
         ${renderTags(record.analysis.tags)}
         <div class="row-actions" style="margin-top:12px">
           <button class="soft-button" data-action="download-card" data-id="${record.id}">
@@ -1308,7 +1513,9 @@ function renderTimelineCard(record) {
         <div class="record-body">
           <div class="record-meta">${h(buildRecordMeta(record, record.source, record.visibility))}</div>
           <h3>${h(record.title)}</h3>
+          ${renderAnalysisSource(record)}
           <p>${h(record.story)}</p>
+          ${record.analysis.visualDescription ? `<p class="visual-description">${h(record.analysis.visualDescription)}</p>` : ""}
           <p class="muted" style="margin-top:10px">${h(record.analysis.highlight)}</p>
           ${renderTags(record.analysis.tags)}
         </div>
@@ -1342,6 +1549,12 @@ function renderMedia(record) {
     return `<div class="record-media"><audio src="${url}" controls></audio></div>`;
   }
   return `<div class="record-media"><div class="media-placeholder"><span>${h(media.name)}</span></div></div>`;
+}
+
+function renderAnalysisSource(record) {
+  const source = record.analysis?.source === "openai-vision" ? "AI 看图" : "本地规则";
+  const className = record.analysis?.source === "openai-vision" ? "analysis-source is-ai" : "analysis-source";
+  return `<span class="${className}">${h(source)}</span>`;
 }
 
 function renderTags(tags) {
