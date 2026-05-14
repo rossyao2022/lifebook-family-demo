@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>张宝心的互动生命之书</title>
+  <style>
+    :root {
+      --accent: #7a5aa8;
+      --accent2: #d46f8a;
+      --paper: #fff8fb;
+      --ink: #211827;
+      --soft: #f1e8f8;
+      --line: color-mix(in srgb, var(--accent) 24%, white);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, color-mix(in srgb, var(--accent) 14%, white), transparent 42%),
+        linear-gradient(240deg, color-mix(in srgb, var(--accent2) 18%, white), transparent 45%),
+        var(--paper);
+    }
+    button { font: inherit; cursor: pointer; }
+    .book-shell { min-height: 100vh; display: grid; grid-template-columns: 320px minmax(0, 1fr); }
+    .cover {
+      padding: 28px;
+      background: color-mix(in srgb, var(--accent) 88%, black);
+      color: white;
+      display: grid;
+      align-content: space-between;
+      gap: 24px;
+    }
+    .cover h1 { margin: 0; font-size: 42px; line-height: 1.08; letter-spacing: 0; }
+    .cover p { line-height: 1.75; color: rgba(255,255,255,.82); }
+    .cover-photo { aspect-ratio: 4/5; border-radius: 8px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,.28); background: rgba(255,255,255,.12); }
+    .cover-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .meta-grid div { padding: 12px; border-radius: 8px; background: rgba(255,255,255,.12); }
+    .meta-grid span { display: block; font-size: 12px; opacity: .76; }
+    .meta-grid strong { display: block; margin-top: 4px; font-size: 20px; }
+    .reader { padding: 28px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 18px; }
+    .toolbar, .bottom-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.72); backdrop-filter: blur(18px);
+    }
+    .toolbar strong { color: var(--accent); }
+    .nav-btn {
+      min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px;
+      background: var(--accent); color: white; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+    .nav-btn.secondary { background: white; color: var(--accent); border: 1px solid var(--line); box-shadow: none; }
+    .page-stage { min-height: 620px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); gap: 18px; }
+    .page-image, .page-story {
+      border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.84);
+      box-shadow: 0 24px 70px rgba(40, 50, 45, .12);
+    }
+    .page-image { min-height: 560px; display: grid; place-items: center; background: var(--soft); }
+    .page-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .page-story { padding: 28px; display: grid; align-content: start; gap: 16px; }
+    .page-story h2 { margin: 0; font-size: 34px; line-height: 1.16; letter-spacing: 0; }
+    .story-meta { color: color-mix(in srgb, var(--ink) 62%, white); font-size: 14px; }
+    .story-text, .summary { line-height: 1.9; font-size: 17px; }
+    .summary { padding: 16px; border-radius: 8px; background: var(--soft); border: 1px solid var(--line); }
+    .tag-row, .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-row span, .tags span {
+      display: inline-flex; min-height: 28px; align-items: center; padding: 4px 10px; border-radius: 999px;
+      background: color-mix(in srgb, var(--accent2) 20%, white); color: color-mix(in srgb, var(--ink) 88%, var(--accent));
+      font-size: 13px; font-weight: 700;
+    }
+    .portraits { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; width: min(520px, 100%); }
+    .portrait-dot { padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: white; aspect-ratio: 1; }
+    .portrait-dot.is-active { border-color: var(--accent2); }
+    .portrait-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .timeline { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 4px; max-width: 380px; }
+    .dot { flex: 0 0 auto; width: 12px; height: 12px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--accent) 22%, white); }
+    .dot.is-active { width: 34px; background: var(--accent); }
+    .lightbox { position: fixed; inset: 0; display: none; place-items: center; padding: 24px; background: rgba(0,0,0,.72); z-index: 10; }
+    .lightbox.is-open { display: grid; }
+    .lightbox img { max-width: min(860px, 94vw); max-height: 88vh; border-radius: 8px; box-shadow: 0 30px 90px rgba(0,0,0,.4); }
+    @media (max-width: 980px) {
+      .book-shell { grid-template-columns: 1fr; }
+      .cover { min-height: auto; }
+      .cover-photo { max-height: 360px; }
+      .page-stage { grid-template-columns: 1fr; }
+      .page-image { min-height: 360px; }
+      .portraits { grid-template-columns: repeat(5, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .reader, .cover { padding: 16px; }
+      .page-story { padding: 18px; }
+      .page-story h2 { font-size: 26px; }
+      .page-image { min-height: 280px; }
+      .toolbar, .bottom-bar { align-items: stretch; }
+      .nav-btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="book-shell" id="pages">
+    <aside class="cover">
+      <div>
+        <p>宝心成长画册</p>
+        <h1>张宝心的互动生命之书</h1>
+        <p>记录表达、关系和自我叙事</p>
+      </div>
+      <div class="cover-photo"><img src="../assets/demo/zhangbaoxin/bedtime-family.png" alt="张宝心封面"></div>
+      <div class="meta-grid">
+        <div><span>年龄</span><strong>12岁</strong></div>
+        <div><span>成长种子</span><strong>18</strong></div>
+        <div><span>案例</span><strong>12岁女孩</strong></div>
+        <div><span>主题</span><strong>自我表达与关系</strong></div>
+      </div>
+    </aside>
+    <section class="reader">
+      <header class="toolbar">
+        <div><strong>LifeBook</strong><span id="counter"></span></div>
+        <div class="tags"><span>情绪觉察 · 11</span><span>亲子互动 · 11</span><span>表达能力 · 10</span><span>习惯养成 · 7</span><span>创造力 · 5</span><span>好奇探索 · 5</span><span>勇敢 · 4</span><span>社交合作 · 3</span></div>
+      </header>
+      <section class="page-stage">
+        <figure class="page-image" id="pageImage"></figure>
+        <article class="page-story">
+          <div class="story-meta" id="pageMeta"></div>
+          <h2 id="pageTitle"></h2>
+          <div class="tag-row" id="pageTags"></div>
+          <p class="story-text" id="pageStory"></p>
+          <div class="summary" id="pageSummary"></div>
+          <p class="story-meta" id="pageCompanion"></p>
+        </article>
+      </section>
+      <footer class="bottom-bar">
+        <button class="nav-btn secondary" id="prevBtn">上一页</button>
+        <div class="timeline" id="timeline"></div>
+        <button class="nav-btn" id="nextBtn">下一页</button>
+        <div class="portraits"><button class="portrait-dot" data-portrait="0" aria-label="查看照片 1"><img src="../assets/demo/zhangbaoxin/portraits/portrait-01.png" alt="张宝心照片 1"></button><button class="portrait-dot" data-portrait="1" aria-label="查看照片 2"><img src="../assets/demo/zhangbaoxin/portraits/portrait-02.png" alt="张宝心照片 2"></button><button class="portrait-dot" data-portrait="2" aria-label="查看照片 3"><img src="../assets/demo/zhangbaoxin/portraits/portrait-03.png" alt="张宝心照片 3"></button><button class="portrait-dot" data-portrait="3" aria-label="查看照片 4"><img src="../assets/demo/zhangbaoxin/portraits/portrait-04.png" alt="张宝心照片 4"></button><button class="portrait-dot" data-portrait="4" aria-label="查看照片 5"><img src="../assets/demo/zhangbaoxin/portraits/portrait-05.png" alt="张宝心照片 5"></button><button class="portrait-dot" data-portrait="5" aria-label="查看照片 6"><img src="../assets/demo/zhangbaoxin/portraits/portrait-06.png" alt="张宝心照片 6"></button><button class="portrait-dot" data-portrait="6" aria-label="查看照片 7"><img src="../assets/demo/zhangbaoxin/portraits/portrait-07.png" alt="张宝心照片 7"></button><button class="portrait-dot" data-portrait="7" aria-label="查看照片 8"><img src="../assets/demo/zhangbaoxin/portraits/portrait-08.png" alt="张宝心照片 8"></button><button class="portrait-dot" data-portrait="8" aria-label="查看照片 9"><img src="../assets/demo/zhangbaoxin/portraits/portrait-09.png" alt="张宝心照片 9"></button><button class="portrait-dot" data-portrait="9" aria-label="查看照片 10"><img src="../assets/demo/zhangbaoxin/portraits/portrait-10.png" alt="张宝心照片 10"></button></div>
+      </footer>
+    </section>
+  </main>
+  <div class="lightbox" id="lightbox"><img id="lightboxImage" alt="照片预览"></div>
+  <script>
+    const pages = [{"index":1,"title":"睡前一家人靠在一起","date":"2026年4月7日","ageLabel":"","source":"妈妈","scene":"家庭","mood":"平静","story":"睡前关灯前，一家人靠在一起聊今天最开心的一件事。张宝心说他喜欢大家都在身边的感觉，也想明天继续讲故事。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","情绪觉察","亲子互动"],"image":"../assets/demo/zhangbaoxin/bedtime-family.png"},{"index":2,"title":"把手工作品举给大家看","date":"2026年4月10日","ageLabel":"","source":"孩子","scene":"作品成果","mood":"开心","story":"今天张宝心完成了一幅手工作品，他把作品举起来讲给家人听，说每一个部分都是自己设计和完成的。家人认真听完，让他很有成就感。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","创造力","情绪觉察","习惯养成"],"image":"../assets/demo/zhangbaoxin/craft-display.png"},{"index":3,"title":"音乐课后的节奏练习","date":"2026年4月12日","ageLabel":"","source":"爸爸","scene":"兴趣活动","mood":"兴奋","story":"兴趣课回来后，张宝心在家继续练习节奏。虽然一开始弹错了几次，但他愿意慢慢调整，还请爸爸听他完整演奏一次。","summary":"这条记录呈现了张宝心在情绪觉察上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["情绪觉察","亲子互动"],"image":"../assets/demo/zhangbaoxin/music-practice.png"},{"index":4,"title":"旅行前一起看地图","date":"2026年4月14日","ageLabel":"","source":"爸爸","scene":"旅行","mood":"好奇","story":"出发前，家人和张宝心一起看地图规划路线。张宝心指着方向问了很多为什么，也尝试说出自己想去的地方。","summary":"这条记录呈现了张宝心在勇敢上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以和张宝心一起选一个“为什么”，周末用观察或小实验继续寻找答案。","tags":["勇敢","好奇探索","亲子互动"],"image":"../assets/demo/zhangbaoxin/travel-map.png"},{"index":5,"title":"把玩具分享给朋友","date":"2026年4月16日","ageLabel":"","source":"奶奶","scene":"家庭","mood":"开心","story":"下午朋友来家里玩，张宝心先有些舍不得，后来主动把自己喜欢的桌游配件拿出来一起玩。他也学着表达自己的规则和边界。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","社交合作","情绪觉察"],"image":"../assets/demo/zhangbaoxin/toy-sharing.png"},{"index":6,"title":"低落时被安静陪着","date":"2026年4月17日","ageLabel":"","source":"妈妈","scene":"亲子对话","mood":"低落","story":"今天张宝心因为没有拼好模型有些低落，妈妈没有马上讲道理，只是坐在旁边陪他。过了一会儿，他愿意说自己其实很想完成。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","情绪觉察","习惯养成","亲子互动"],"image":"../assets/demo/zhangbaoxin/quiet-emotional-support.png"},{"index":7,"title":"自己整理明天的书包","date":"2026年4月19日","ageLabel":"","source":"妈妈","scene":"家庭","mood":"平静","story":"睡前张宝心主动整理书包，把书、本子和水杯一样一样放好。妈妈只在旁边提醒了一次，他就坚持自己完成。","summary":"这条记录呈现了张宝心在习惯养成上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以和张宝心一起回看这张照片，问问他最想把哪一幕放进自己的生命之书。","tags":["习惯养成","亲子互动"],"image":"../assets/demo/zhangbaoxin/schoolbag-organizing.png"},{"index":8,"title":"餐桌上的小实验","date":"2026年4月21日","ageLabel":"","source":"爸爸","scene":"兴趣活动","mood":"好奇","story":"爸爸准备了安全的小实验材料，张宝心用放大镜观察杯子里的变化，不停提出为什么。他还尝试画下自己观察到的结果。","summary":"这条记录呈现了张宝心在勇敢上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以和张宝心一起选一个“为什么”，周末用观察或小实验继续寻找答案。","tags":["勇敢","创造力","好奇探索","亲子互动"],"image":"../assets/demo/zhangbaoxin/science-experiment.png"},{"index":9,"title":"公园里勇敢向前跑","date":"2026年4月22日","ageLabel":"","source":"爷爷","scene":"旅行","mood":"勇敢","story":"今天在公园跑步，张宝心一开始担心自己跟不上，后来还是决定尝试。跑完后他说，原来坚持一下身体会越来越有力量。","summary":"这条记录呈现了张宝心在勇敢上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以和张宝心一起回看这张照片，问问他最想把哪一幕放进自己的生命之书。","tags":["勇敢","习惯养成","运动发展"],"image":"../assets/demo/zhangbaoxin/outdoor-running.png"},{"index":10,"title":"第一次做厨房小帮手","date":"2026年4月24日","ageLabel":"","source":"妈妈","scene":"家庭","mood":"开心","story":"周末做早餐时，张宝心主动说想帮忙搅拌面糊。他小心地完成步骤，也会问为什么要先放鸡蛋再搅拌。","summary":"这条记录呈现了张宝心在情绪觉察上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["情绪觉察","好奇探索","习惯养成"],"image":"../assets/demo/zhangbaoxin/kitchen-helper.png"},{"index":11,"title":"生日愿望被认真听见","date":"2026年4月25日","ageLabel":"","source":"妈妈","scene":"生日节日","mood":"兴奋","story":"生日晚上，张宝心吹蜡烛前有些兴奋，说希望今年可以学会游泳，也想给家人画一本小书。家人把这个愿望记录进生命之书。","summary":"这条记录呈现了张宝心在创造力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["创造力","情绪觉察","亲子互动"],"image":"../assets/demo/zhangbaoxin/birthday-candles.png"},{"index":12,"title":"奶奶讲小时候的故事","date":"2026年4月27日","ageLabel":"","source":"奶奶","scene":"家庭","mood":"开心","story":"奶奶翻出老相册，给张宝心讲自己小时候的家庭故事。张宝心听得很认真，还问奶奶小时候最喜欢玩什么。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","情绪觉察","亲子互动"],"image":"../assets/demo/zhangbaoxin/grandma-storytime.png"},{"index":13,"title":"睡前亲子共读","date":"2026年4月28日","ageLabel":"","source":"爸爸","scene":"亲子对话","mood":"平静","story":"家人和张宝心一起读故事书，张宝心会停下来讨论角色为什么这样选择，还把故事里的角色和自己的朋友联系起来，表达越来越自然。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以请张宝心再讲一遍这个故事，先听他说完整，再回应你听见的细节。","tags":["表达能力","社交合作","好奇探索","亲子互动"],"image":"../assets/demo/zhangbaoxin/parent-child-reading.png"},{"index":14,"title":"搭出自己的小小城市","date":"2026年4月29日","ageLabel":"","source":"孩子","scene":"作品成果","mood":"兴奋","story":"张宝心今天用积木搭了一座有路线、有空间分区的模型城市。他坚持调整结构，还主动介绍每个颜色代表什么功能。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","创造力","情绪觉察","习惯养成"],"image":"../assets/demo/zhangbaoxin/building-blocks.png"},{"index":15,"title":"周末自然观察","date":"2026年4月30日","ageLabel":"","source":"爸爸","scene":"旅行","mood":"好奇","story":"一家人散步时，张宝心蹲在花坛旁看蚂蚁搬东西，连续问了好几个为什么。爸爸没有急着给答案，而是和他一起观察了十分钟。","summary":"这条记录呈现了张宝心在好奇探索上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以和张宝心一起选一个“为什么”，周末用观察或小实验继续寻找答案。","tags":["好奇探索","亲子互动"],"image":"../assets/demo/zhangbaoxin/nature-observation.png"},{"index":16,"title":"小组里主动分材料","date":"2026年5月2日","ageLabel":"","source":"老师","scene":"学校","mood":"平静","story":"老师记录到，张宝心在课堂小组活动里主动把资料卡和马克笔分给同学，还提醒大家轮流使用工具。今天他更愿意合作，也能表达自己的需求。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以请张宝心再讲一遍这个故事，先听他说完整，再回应你听见的细节。","tags":["表达能力","社交合作"],"image":"../assets/demo/zhangbaoxin/classroom-cooperation.png"},{"index":17,"title":"给外婆讲自己的画","date":"2026年5月3日","ageLabel":"","source":"外婆","scene":"作品成果","mood":"开心","story":"晚饭后，张宝心拿着今天画的色彩练习作品给外婆讲故事，说里面住着会发光的家人。外婆认真听完，还请他明天继续画下一页。","summary":"这条记录呈现了张宝心在表达能力上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["表达能力","创造力","情绪觉察","亲子互动"],"image":"../assets/demo/zhangbaoxin/drawing-grandma.png"},{"index":18,"title":"第一次站上小舞台","date":"2026年5月4日","ageLabel":"","source":"妈妈","scene":"学校","mood":"勇敢","story":"班级社团展示，张宝心上台前有一点紧张，但音乐开始后还是完成了自我介绍。听到掌声时，他笑得很开心，也愿意讲一讲自己站上舞台的感受。","summary":"这条记录呈现了张宝心在勇敢上的一个具体变化，也让家人看见了值得继续回应和鼓励的成长信号。","companion":"可以问张宝心：“刚才那个时刻，你最希望家人怎么陪着你？”","tags":["勇敢","表达能力","情绪觉察","习惯养成"],"image":"../assets/demo/zhangbaoxin/stage-performance.png"}];
+    let current = 0;
+    const pageImage = document.querySelector('#pageImage');
+    const pageMeta = document.querySelector('#pageMeta');
+    const pageTitle = document.querySelector('#pageTitle');
+    const pageTags = document.querySelector('#pageTags');
+    const pageStory = document.querySelector('#pageStory');
+    const pageSummary = document.querySelector('#pageSummary');
+    const pageCompanion = document.querySelector('#pageCompanion');
+    const counter = document.querySelector('#counter');
+    const timeline = document.querySelector('#timeline');
+    const lightbox = document.querySelector('#lightbox');
+    const lightboxImage = document.querySelector('#lightboxImage');
+
+    function escapeText(text) {
+      return String(text || '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
+    }
+
+    function renderTimeline() {
+      timeline.innerHTML = pages.map((_, index) => '<button class="dot" data-page="' + index + '" aria-label="第 ' + (index + 1) + ' 页"></button>').join('');
+      timeline.querySelectorAll('.dot').forEach((button) => button.addEventListener('click', () => showPage(Number(button.dataset.page))));
+    }
+
+    function showPage(index) {
+      current = (index + pages.length) % pages.length;
+      const page = pages[current];
+      pageImage.innerHTML = '<img src="' + page.image + '" alt="' + escapeText(page.title) + '">';
+      pageMeta.textContent = [page.date, page.ageLabel, page.source, page.scene, page.mood].filter(Boolean).join(' · ');
+      pageTitle.textContent = page.title;
+      pageTags.innerHTML = page.tags.map((tag) => '<span>' + escapeText(tag) + '</span>').join('');
+      pageStory.textContent = page.story;
+      pageSummary.textContent = page.summary;
+      pageCompanion.textContent = page.companion ? '陪伴问题：' + page.companion : '';
+      counter.textContent = ' · 第 ' + (current + 1) + ' / ' + pages.length + ' 页';
+      document.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('is-active', idx === current));
+    }
+
+    document.querySelector('#prevBtn').addEventListener('click', () => showPage(current - 1));
+    document.querySelector('#nextBtn').addEventListener('click', () => showPage(current + 1));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') showPage(current - 1);
+      if (event.key === 'ArrowRight') showPage(current + 1);
+      if (event.key === 'Escape') lightbox.classList.remove('is-open');
+    });
+    pageImage.addEventListener('click', () => {
+      const image = pageImage.querySelector('img');
+      if (!image) return;
+      lightboxImage.src = image.src;
+      lightbox.classList.add('is-open');
+    });
+    document.querySelectorAll('.portrait-dot').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.portrait-dot').forEach((item) => item.classList.remove('is-active'));
+        button.classList.add('is-active');
+        lightboxImage.src = button.querySelector('img').src;
+        lightbox.classList.add('is-open');
+      });
+    });
+    lightbox.addEventListener('click', () => lightbox.classList.remove('is-open'));
+    renderTimeline();
+    showPage(0);
+  </script>
+</body>
+</html>

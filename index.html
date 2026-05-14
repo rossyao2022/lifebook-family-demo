@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>生命之书 LifeBook 本地演示</title>
+    <link rel="stylesheet" href="./app/styles.css" />
+  </head>
+  <body>
+    <svg aria-hidden="true" class="icon-sprite">
+      <symbol id="icon-home" viewBox="0 0 24 24">
+        <path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z" />
+      </symbol>
+      <symbol id="icon-upload" viewBox="0 0 24 24">
+        <path d="M12 3v12m0-12 5 5m-5-5-5 5" />
+        <path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+      </symbol>
+      <symbol id="icon-timeline" viewBox="0 0 24 24">
+        <path d="M12 4v16" />
+        <path d="M6 7h6m0 5h6m-12 5h6" />
+        <circle cx="12" cy="7" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="12" cy="17" r="2" />
+      </symbol>
+      <symbol id="icon-tree" viewBox="0 0 24 24">
+        <path d="M12 21v-8" />
+        <path d="M12 13c-4 0-7-2.8-7-6.5C9 6 11 8 12 13Z" />
+        <path d="M12 13c4 0 7-2.8 7-6.5C15 6 13 8 12 13Z" />
+      </symbol>
+      <symbol id="icon-report" viewBox="0 0 24 24">
+        <path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+        <path d="M14 3v5h5" />
+        <path d="M8 13h8M8 17h6" />
+      </symbol>
+      <symbol id="icon-family" viewBox="0 0 24 24">
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="10" r="2.5" />
+        <path d="M3 20a6 6 0 0 1 12 0" />
+        <path d="M14 20a4.5 4.5 0 0 1 7 0" />
+      </symbol>
+      <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
+      <symbol id="icon-seed" viewBox="0 0 24 24">
+        <path d="M12 21c5-4 8-8 8-12a8 8 0 0 0-16 0c0 4 3 8 8 12Z" />
+        <path d="M12 17V9m0 4 4-4m-4 4-4-4" />
+      </symbol>
+      <symbol id="icon-card" viewBox="0 0 24 24">
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <path d="M7 9h10M7 13h6" />
+        <circle cx="16.5" cy="15.5" r="1.5" />
+      </symbol>
+      <symbol id="icon-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16M10 11v6M14 11v6" />
+        <path d="M6 7l1 14h10l1-14M9 7V4h6v3" />
+      </symbol>
+      <symbol id="icon-magic" viewBox="0 0 24 24">
+        <path d="M4 20 15 9" />
+        <path d="m13 3 1.2 3.2L17.5 7l-3.3 1-1.2 3.2L11.8 8 8.5 7l3.3-.8Z" />
+        <path d="m19 13 .8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8Z" />
+      </symbol>
+      <symbol id="icon-print" viewBox="0 0 24 24">
+        <path d="M7 8V3h10v5" />
+        <path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" />
+        <path d="M7 14h10v7H7z" />
+      </symbol>
+    </svg>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark">LB</div>
+          <div>
+            <strong>生命之书</strong>
+            <span>LifeBook</span>
+          </div>
+        </div>
+
+        <div class="child-card" id="profileSummary"></div>
+
+        <nav class="nav-list" aria-label="主要导航">
+          <button class="nav-item is-active" data-view="dashboard">
+            <svg><use href="#icon-home"></use></svg>
+            <span>今日总览</span>
+          </button>
+          <button class="nav-item" data-view="capture">
+            <svg><use href="#icon-upload"></use></svg>
+            <span>记录成长</span>
+          </button>
+          <button class="nav-item" data-view="timeline">
+            <svg><use href="#icon-timeline"></use></svg>
+            <span>成长时间线</span>
+          </button>
+          <button class="nav-item" data-view="tree">
+            <svg><use href="#icon-tree"></use></svg>
+            <span>成长树</span>
+          </button>
+          <button class="nav-item" data-view="report">
+            <svg><use href="#icon-report"></use></svg>
+            <span>生命之书</span>
+          </button>
+          <button class="nav-item" data-view="family">
+            <svg><use href="#icon-family"></use></svg>
+            <span>家庭共育</span>
+          </button>
+        </nav>
+
+        <div class="local-note">
+          <span>本地演示</span>
+          <strong>数据仅保存在当前浏览器</strong>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="viewEyebrow">Capture · Understand · Companion · Create</p>
+            <h1 id="viewTitle">今日总览</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" data-action="open-demo-picker" title="导入演示样本" aria-label="导入演示样本">
+              <svg><use href="#icon-magic"></use></svg>
+            </button>
+            <button class="primary-button" data-view="capture">
+              <svg><use href="#icon-plus"></use></svg>
+              <span>新增记录</span>
+            </button>
+          </div>
+        </header>
+
+        <section id="viewRoot" class="view-root" aria-live="polite"></section>
+      </main>
+    </div>
+
+    <div id="demoPickerRoot"></div>
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+    <script src="./app/app.js" defer></script>
+  </body>
+</html>
