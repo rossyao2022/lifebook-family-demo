@@ -1,0 +1,14 @@
+{
+  "name": "lifebook-family-demo",
+  "version": "0.2.0",
+  "private": true,
+  "description": "LifeBook family growth record demo with optional server-side AI image analysis.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check server/ai-analysis.cjs && node --check api/analyze.js && node --check app/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
